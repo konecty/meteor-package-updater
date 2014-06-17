@@ -12,6 +12,8 @@ configFileName = 'updater.json'
 smartFileName = 'smart.json'
 packageFileName = 'package.js'
 
+initialDir = process.cwd()
+
 program
 	.version('0.0.1')
 	.option('-d, --directory [path]', 'Meteor packages parent directory', String, '.')
@@ -46,15 +48,14 @@ processModule = (dir) ->
 	smart = fs.readFileSync path.join dir, smartFileName
 	smart = JSON.parse smart
 
+	process.chdir initialDir
 	process.chdir path.join dir, 'lib'
 
+	#Download git data
 	output = execSync.exec 'git fetch origin master'
 	if output.code isnt 0 then return console.log output.stdout?.red
 
-	output = execSync.exec 'git rev-parse --short HEAD'
-	if output.code isnt 0 then return console.log output.stdout?.red
-	currentHash = output.stdout.replace /\n$/, ''
-
+	#List all tags
 	output = execSync.exec 'git show-ref --abbrev --tags -d'
 	if output.code isnt 0 then return console.log output.stdout?.red
 
@@ -66,53 +67,68 @@ processModule = (dir) ->
 			tag = tag.split(' ')
 			tags[tag[0]] = tag[1].replace('refs/tags/', '').replace(/^v/, '').replace('^{}', '')
 
+	#List all logs
 	output = execSync.exec 'git log --pretty=format:"%h %s" --all'
 	if output.code isnt 0 then return console.log output.stdout?.red
 	gitLogs = output.stdout.replace /\n$/, ''
 	gitLogs = gitLogs.split('\n')
 
-	nextLog = undefined
-	gitLogs.forEach (gitLog, index) ->
-		if gitLog.indexOf(currentHash) > -1 and index > 0
-			nextLog = gitLogs[index - 1]
+	doProcess = ->
+		#Get current position
+		output = execSync.exec 'git rev-parse --short HEAD'
+		if output.code isnt 0 then return console.log output.stdout?.red
+		currentHash = output.stdout.replace /\n$/, ''
 
-	if not nextLog? then return console.log 'No changes'.green
+		#Find next position in log
+		nextLog = undefined
+		gitLogs.forEach (gitLog, index) ->
+			if gitLog.indexOf(currentHash) > -1 and index > 0
+				nextLog = gitLogs[index - 1]
 
-	nextLog = nextLog.split(' ')
-	nextHash = nextLog.shift()
-	nextCommit = nextLog.join(' ')
+		#Return if not found
+		if not nextLog? then return console.log 'No changes'.green
 
-	console.log nextHash, nextCommit
+		nextLog = nextLog.split(' ')
+		nextHash = nextLog.shift()
+		nextCommit = nextLog.join(' ').replace(/"/g, '\"')
 
-	output = execSync.exec "git checkout #{nextHash}"
-	if output.code isnt 0 then return console.log output.stdout?.red
+		console.log nextHash, nextCommit
 
-	process.chdir '../'
+		#Put lib in next position
+		output = execSync.exec "git checkout #{nextHash}"
+		if output.code isnt 0 then return console.log output.stdout?.red
 
-	versionAppend = "+#{nextHash}"
+		#Go back to package dir
+		process.chdir '../'
 
-	# console.log tags
-	if tags[nextHash]?
-		console.log "     #{tags[nextHash]}".yellow
-		versionAppend = ''
-		smart.version = tags[nextHash]
-		fs.writeFileSync smartFileName, JSON.stringify(smart, null, '  ')
+		versionAppend = "+#{nextHash}"
 
-	output = execSync.exec "git commit -a -m \"updated submodule to commit #{nextHash} (#{nextCommit})\""
-	if output.code isnt 0 then return console.log output.stdout?.red
+		#Update package if need
+		if tags[nextHash]?
+			console.log "     #{tags[nextHash]}".yellow
+			versionAppend = ''
+			smart.version = tags[nextHash]
+			fs.writeFileSync smartFileName, JSON.stringify(smart, null, '  ')
 
-	output = execSync.exec "git tag -a v#{smart.version}#{versionAppend} -m \"#{nextCommit}\""
-	if output.code isnt 0 then return console.log output.stdout?.red
+		#Commit changes
+		output = execSync.exec "git commit -a -m \"updated submodule to commit #{nextHash} (#{nextCommit})\""
+		if output.code isnt 0 then return console.log output.stdout?.red
 
-	# output = execSync.exec "git push origin master --tags"
-	# if output.code isnt 0 then return console.log output.stdout?.red
+		#Tag changes
+		output = execSync.exec "git tag -a v#{smart.version}#{versionAppend} -m \"#{nextCommit}\""
+		if output.code isnt 0 then return console.log output.stdout?.red
 
-	# if tags[nextHash]?
-	# 	output = execSync.exec "mrt publish"
-	# 	if output.code isnt 0 then return console.log output.stdout?.red
+		# output = execSync.exec "git push origin master --tags"
+		# if output.code isnt 0 then return console.log output.stdout?.red
 
-	process.chdir '../'
-	processModule dir
+		# if tags[nextHash]?
+		# 	output = execSync.exec "mrt publish"
+		# 	if output.code isnt 0 then return console.log output.stdout?.red
+
+		process.chdir 'lib'
+		doProcess()
+
+	doProcess()
 
 ###
  cd lib
