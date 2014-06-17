@@ -2,8 +2,9 @@
   "name": "meteor-package-updater",
   "version": "0.0.1",
   "description": "Updates Meteor packages automatically",
-  "main": "index.js",
+  "main": "index.coffee",
   "scripts": {
+    "start": "coffee index.coffee",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -15,5 +16,10 @@
   "bugs": {
     "url": "https://github.com/Konecty/meteor-package-updater/issues"
   },
-  "homepage": "https://github.com/Konecty/meteor-package-updater"
+  "homepage": "https://github.com/Konecty/meteor-package-updater",
+  "dependencies": {
+    "commander": "~2.2.0",
+    "colors": "~0.6.2",
+    "async": "~0.9.0"
+  }
 }
