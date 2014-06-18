@@ -18,12 +18,12 @@ initialDir = process.cwd()
 program
 	.version('0.0.1')
 	.option('-d, --directory [path]', 'Meteor packages parent directory', String, '.')
+	.option('-u, --username <username>', 'Atmosphere Username')
+	.option('-p, --password <password>', 'Atmosphere Password')
 	.parse(process.argv);
 
-if not program.directory?
+if not program.username? or not program.password?
 	return program.help()
-
-console.log program.directory
 
 
 validateModule = (dir) ->
@@ -127,7 +127,7 @@ processModule = (dir) ->
 
 		if tags[nextHash]? and tags[nextHash] is smart.version
 			console.log "mrt publish -> #{tags[nextHash]}".yellow
-			output = execSync.exec "mrt publish"
+			output = execSync.exec "mrt publish --repoUsername #{program.username} --repoPassword #{program.password}"
 			if output.code isnt 0 then console.log output.stdout?.red
 
 		process.chdir 'lib'
@@ -136,26 +136,8 @@ processModule = (dir) ->
 	doProcess()
 
 ###
- cd lib
- #git rev-parse --short HEAD
- git fetch origin master
- #git log --oneline
-
-array = git log --oneline HEAD..origin/master
-nextCommit = array.pop
-
-git checkout 38d5c9f
-git commit -a -m "updated submodule to commit 38d5c9f"
-git submodule status
-git submodule update
-cd lib
-cd ..
-git -a tag 0.0.0+38d5c9f -m ""
-git push origin master --tags
+git log --pretty=format:"%h||%d||%s" --all
 ###
-
-
-
 
 
 files = fs.readdirSync program.directory
