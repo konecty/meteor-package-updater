@@ -21,6 +21,7 @@
     "commander": "~2.2.0",
     "colors": "~0.6.2",
     "async": "~0.9.0",
-    "execSync": "~1.0.1-pre"
+    "execSync": "~1.0.1-pre",
+    "semver": "~2.3.0"
   }
 }

@@ -4,6 +4,7 @@ require 'colors'
 fs = require 'fs'
 path = require 'path'
 async = require 'async'
+semver = require 'semver'
 program = require 'commander'
 execSync = require 'execSync'
 
@@ -90,7 +91,7 @@ processModule = (dir) ->
 
 		nextLog = nextLog.split(' ')
 		nextHash = nextLog.shift()
-		nextCommit = nextLog.join(' ').replace(/"/g, '\"')
+		nextCommit = nextLog.join(' ').replace(/"/g, '\\"')
 
 		console.log nextHash, nextCommit
 
@@ -102,28 +103,32 @@ processModule = (dir) ->
 		process.chdir '../'
 
 		versionAppend = "+#{nextHash}"
+		version = smart.version
 
 		#Update package if need
 		if tags[nextHash]?
-			console.log "     #{tags[nextHash]}".yellow
+			console.log "tag -> #{tags[nextHash]}".yellow
+			version = tags[nextHash]
 			versionAppend = ''
-			smart.version = tags[nextHash]
-			fs.writeFileSync smartFileName, JSON.stringify(smart, null, '  ')
+			if semver.gt(tags[nextHash], smart.version) is true
+				smart.version = tags[nextHash]
+				fs.writeFileSync smartFileName, JSON.stringify(smart, null, '  ')
 
 		#Commit changes
 		output = execSync.exec "git commit -a -m \"updated submodule to commit #{nextHash} (#{nextCommit})\""
 		if output.code isnt 0 then return console.log output.stdout?.red
 
 		#Tag changes
-		output = execSync.exec "git tag -a v#{smart.version}#{versionAppend} -m \"#{nextCommit}\""
+		output = execSync.exec "git tag -a v#{version}#{versionAppend} -m \"#{nextCommit}\""
 		if output.code isnt 0 then return console.log output.stdout?.red
 
-		# output = execSync.exec "git push origin master --tags"
-		# if output.code isnt 0 then return console.log output.stdout?.red
+		output = execSync.exec "git push origin master --tags"
+		if output.code isnt 0 then return console.log output.stdout?.red
 
-		# if tags[nextHash]?
-		# 	output = execSync.exec "mrt publish"
-		# 	if output.code isnt 0 then return console.log output.stdout?.red
+		if tags[nextHash]? and tags[nextHash] is smart.version
+			console.log "mrt publish -> #{tags[nextHash]}".yellow
+			output = execSync.exec "mrt publish"
+			if output.code isnt 0 then console.log output.stdout?.red
 
 		process.chdir 'lib'
 		doProcess()
