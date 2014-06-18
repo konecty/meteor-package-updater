@@ -127,7 +127,7 @@ processModule = (dir) ->
 
 		if tags[nextHash]? and tags[nextHash] is smart.version
 			console.log "mrt publish -> #{tags[nextHash]}".yellow
-			output = execSync.exec "mrt publish --repoUsername #{program.username} --repoPassword #{program.password}"
+			output = execSync.exec "mrt publish . --repoUsername #{program.username} --repoPassword #{program.password}"
 			if output.code isnt 0 then console.log output.stdout?.red
 
 		process.chdir 'lib'
