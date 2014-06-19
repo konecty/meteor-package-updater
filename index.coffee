@@ -50,7 +50,7 @@ processModule = (dir) ->
 	smart = JSON.parse smart
 
 	process.chdir initialDir
-	process.chdir path.join dir, 'lib'
+	process.chdir path.join dir, 'vendor'
 
 	#Download git data
 	output = execSync.exec 'git fetch origin master'
@@ -95,7 +95,7 @@ processModule = (dir) ->
 
 		console.log nextHash, nextCommit
 
-		#Put lib in next position
+		#Put vendor in next position
 		output = execSync.exec "git checkout #{nextHash}"
 		if output.code isnt 0 then return console.log output.stdout?.red
 
@@ -130,7 +130,7 @@ processModule = (dir) ->
 			output = execSync.exec "mrt publish . --repoUsername #{program.username} --repoPassword #{program.password}"
 			if output.code isnt 0 then console.log output.stdout?.red
 
-		process.chdir 'lib'
+		process.chdir 'vendor'
 		doProcess()
 
 	doProcess()
